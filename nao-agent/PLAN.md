@@ -45,11 +45,11 @@ project_name: travelers-insurance
 databases:
 - name: supabase-travelers
   type: postgres
-  host: db.hevfinkbgeapcpnlmvec.supabase.co
+  host: $DB_HOST
   port: 5432
   database: postgres
   user: postgres
-  password: "#7DuQF@Gy/!d98*"
+  password: $DB_PASSWORD
   schema_name: public
   accessors: [columns, description, preview]
 llm:

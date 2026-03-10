@@ -1,6 +1,11 @@
 .env
+.env.*
 __pycache__/
 *.pyc
 .venv/
 nao-agent/nao_config.yaml
 nao-agent/tests/outputs/
+dashboard/.env.local
+dashboard/.vercel/
+dashboard/node_modules/
+dashboard/.next/
