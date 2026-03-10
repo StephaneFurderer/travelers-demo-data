@@ -118,7 +118,7 @@ def main():
     print(f"  Bookings:    {len(inserted_bookings):>8,}")
     print(f"  Policies:    {len(inserted_policies):>8,}")
     print(f"  Claims:      {len(inserted_claims):>8,}")
-    print(f"  Claim rate:  {len(inserted_claims)/len(inserted_policies)*100:>7.2f}%")
+    print(f"  Reported frequency: {len(inserted_claims)/len(inserted_policies)*100:>7.2f}%")
     print(f"  Total time:  {total_time:>7.1f}s")
     print(f"{'='*60}")
 

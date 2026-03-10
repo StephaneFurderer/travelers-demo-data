@@ -65,7 +65,7 @@ llm:
 Encode the full semantic model:
 - 5 tables with column descriptions and join paths
 - 3 segment definitions (winter_birds, holiday_travelers, baseline)
-- Metric formulas: pure_premium, loss_ratio, claim_rate, exposure
+- Metric formulas: pure_premium, loss_ratio, reported_frequency, exposure
 - Common query patterns (loss ratio by X, exposure at location on date)
 - Hurricane exposure methodology (filter by lat/lon + date range)
 - SQL guardrails (explicit JOINs, qualified column names, rounding, NULL handling)
@@ -135,13 +135,13 @@ Test: "How many bookings by segment?" → expect 12K/18K/20K.
 
 **Act 2 — Questions the dashboard can't answer (3 min)**
 4. "Average trip duration for claimants vs non-claimants?"
-5. "Claim rate by age bracket (under 30, 30-50, 50-65, 65+)?"
+5. "Reported frequency by age bracket (under 30, 30-50, 50-65, 65+)?"
 6. "Which origin→destination routes have highest claim frequency?"
 
 **Act 3 — Hurricane scenario (3 min)**
 7. "How many travelers are on the ground at Gulf Coast destinations Sept 10-16?"
 8. "What's the total exposure by city?"
-9. "Sept Gulf Coast claim rate vs other regions?"
+9. "Sept Gulf Coast reported frequency vs other regions?"
 
 ## File Structure
 

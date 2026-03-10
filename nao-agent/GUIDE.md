@@ -121,6 +121,11 @@ All three pass.
 
 **Point:** In a real catastrophe, these answers need to come in minutes, not days. The agent delivers them in seconds.
 
+### Bonus - "Things that require more data"
+10. Forecast the portfolio using the historical trend.
+11. I want to see the development of each cohort per purchase month
+12. Add an ultimate loss estimate per cohort using a chain-ladder development factor
+
 ---
 
 ## What This Doesn't Replace

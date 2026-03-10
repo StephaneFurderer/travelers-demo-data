@@ -27,7 +27,7 @@ A booking with `coverage_type = "hotel_and_flight"` produces **2 policy rows** (
 - **GLM coefficients are hardcoded in `config.py`** (`FREQ_GLM`, `SEV_GLM`). Claims are generated from these true Poisson/Gamma GLMs so fitting a GLM on the output recovers known coefficients.
 - **Rating factors**: age, state_of_residence, trip_cost, product (hotel/flight), segment, departure month.
 - **20 US states of residence**, weighted differently per segment.
-- **Claim rate ~7%**: 30% pre-departure (cancellation), 70% post-departure (50/50 delay vs interruption).
+- **Reported frequency ~7%**: 30% pre-departure (cancellation), 70% post-departure (50/50 delay vs interruption).
 - `base_frequency` on each policy row stores the GLM-computed claim probability.
 - `pure_premium` on each policy = `frequency × E[severity]` (blended across claim types, using the severity GLM with log-normal correction). On each booking = sum of its policies' pure premiums. This is the expected loss per record — use `SUM(pure_premium)` across bookings for portfolio-level top line.
 

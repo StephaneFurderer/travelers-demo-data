@@ -83,6 +83,57 @@ ORDER BY dollar_exposure DESC;
 
 September has elevated claim frequency (month_9 GLM coefficient = +0.35, the highest).
 
+## 2026 Cohort & Dislocation Analysis
+
+The portfolio has two cohorts by `purchase_date`:
+- **2025 cohort**: `purchase_date` between 2025-01-01 and 2025-12-31
+- **2026 cohort**: `purchase_date` >= 2026-01-01
+
+The 2026 cohort was priced using the same 2025 GLM model (stored in `base_frequency` and `pure_premium` on policies), but actual claims come from shifted 2026 reality. The gap between predicted and actual = **dislocation**.
+
+### Key Dislocation Metrics
+
+- **A/E Ratio (Actual/Expected)**: `SUM(claim_amount) / SUM(pure_premium)` — 1.0 = model is correct, >1.0 = model under-predicts
+- **Rate Adequacy**: inverse of A/E — how adequate the rate is for covering actual losses
+- **Reported Frequency**: `COUNT(claims) / COUNT(policies)` — compare 2025 (~7%) vs 2026 (~9-10%)
+- **Frequency A/E**: actual claim count / SUM(base_frequency) — measures frequency dislocation
+
+### glm_models Table
+
+Reference table storing GLM coefficients for both model versions:
+- `model_version`: '2025_v1' (pricing model) or '2026_actual' (shifted reality)
+- `model_type`: 'frequency' or 'severity'
+- `coefficient_name`: e.g., 'intercept', 'segment_baseline', 'month_9', 'destination_caribbean'
+- `coefficient_value`: numeric coefficient value
+- `description`: human-readable explanation
+
+To compare coefficients between versions:
+```sql
+SELECT a.coefficient_name,
+       a.coefficient_value AS "2025",
+       b.coefficient_value AS "2026",
+       b.coefficient_value - a.coefficient_value AS shift
+FROM glm_models a
+JOIN glm_models b ON a.coefficient_name = b.coefficient_name
+  AND a.model_type = b.model_type
+WHERE a.model_version = '2025_v1'
+  AND b.model_version = '2026_actual'
+  AND a.model_type = 'frequency'
+ORDER BY ABS(b.coefficient_value - a.coefficient_value) DESC;
+```
+
+### dislocation_analysis Table
+
+Pre-computed results table with A/E ratios, heatmap data, and rate adequacy metrics. Query this table for quick answers about model performance rather than recomputing from raw data:
+```sql
+-- Quick portfolio A/E
+SELECT metrics->>'ae_ratio' AS portfolio_ae FROM dislocation_analysis WHERE analysis_type = 'overall';
+-- A/E by segment
+SELECT dimension, (metrics->>'ae_ratio')::float AS ae FROM dislocation_analysis WHERE analysis_type = 'ae_by_dimension' AND dimension_type = 'segment' ORDER BY ae DESC;
+-- Worst heatmap cells
+SELECT dimension AS segment, month, (metrics->>'ae_ratio')::float AS ae FROM dislocation_analysis WHERE analysis_type = 'heatmap' ORDER BY ae DESC LIMIT 5;
+```
+
 ## Query Guardrails
 
 1. Always use explicit JOINs (never implicit comma joins)

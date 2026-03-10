@@ -1,0 +1,22 @@
+prompt: "What is the A/E ratio (actual losses divided by expected losses) by segment for the 2026 cohort (purchase_date >= '2026-01-01')? Order by A/E descending."
+
+sql: |
+  SELECT
+    b.segment,
+    ROUND(SUM(c.claim_amount)::numeric, 2) AS actual_loss,
+    ROUND(SUM(p.pure_premium)::numeric, 2) AS expected_loss,
+    ROUND((SUM(c.claim_amount) / NULLIF(SUM(p.pure_premium), 0))::numeric, 4) AS ae_ratio
+  FROM bookings b
+  JOIN policies p ON p.booking_id = b.id
+  LEFT JOIN claims c ON c.policy_id = p.id
+  WHERE b.purchase_date >= '2026-01-01'
+  GROUP BY b.segment
+  ORDER BY ae_ratio DESC
+
+tests:
+  - type: columns
+    values: [segment, actual_loss, expected_loss, ae_ratio]
+  - type: row_count
+    value: 3
+  - type: join_count
+    min: 2
