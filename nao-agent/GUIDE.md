@@ -167,10 +167,7 @@ For transparency, here are the key prompts I gave Claude Code (the AI coding ass
 **Prompt 1 — Initial setup:**
 > "Implement the following plan: Install Nao CLI, write nao_config.yaml pointing to our Supabase Postgres database, write RULES.md as a semantic model covering all 5 tables, their joins, metric definitions, and hurricane exposure methodology. Sync the schema, enrich descriptions, write 3 test cases, and verify everything works."
 
-**Prompt 2 — Terminology fix:**
-> "In my initial application I called claim rate something that should have been called reported frequency."
-
-**Prompt 3 — Verification:**
+**Prompt 2 — Verification:**
 > Ran `nao test` — all 3 test cases passed on the first run after tuning the prompts.
 
 The total build time from "empty folder" to "all tests passing" was under 2 hours, including debugging dependency issues.
