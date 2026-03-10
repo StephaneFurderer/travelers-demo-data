@@ -1,0 +1,14 @@
+name: Hurricane exposure - Gulf Coast September
+prompt: If a hurricane hits the Gulf Coast September 10-16 2025, how many travelers are on the ground and what is the total dollar exposure, broken down by city?
+sql: |
+  SELECT d.city,
+         COUNT(DISTINCT b.id) AS travelers_on_ground,
+         ROUND(SUM(p.trip_cost)::numeric, 2) AS dollar_exposure
+  FROM bookings b
+  JOIN destinations d ON b.destination_id = d.id
+  JOIN policies p ON p.booking_id = b.id
+  WHERE d.destination_type = 'gulf_coast'
+    AND b.departure_date <= '2025-09-16'
+    AND b.return_date >= '2025-09-10'
+  GROUP BY d.city
+  ORDER BY dollar_exposure DESC

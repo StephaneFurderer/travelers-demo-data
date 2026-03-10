@@ -1,0 +1,9 @@
+name: Average claim amount by segment
+prompt: What is the average claim amount by customer segment? Order by segment name alphabetically.
+sql: |
+  SELECT b.segment, ROUND(AVG(c.claim_amount)::numeric, 2) AS avg_claim_amount
+  FROM bookings b
+  JOIN policies p ON p.booking_id = b.id
+  JOIN claims c ON c.policy_id = p.id
+  GROUP BY b.segment
+  ORDER BY b.segment

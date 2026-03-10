@@ -1,0 +1,11 @@
+name: Loss ratio by destination type
+prompt: What is the loss ratio (total claims divided by total trip cost) by destination type? Express as a decimal (e.g., 0.03) not a percentage. Order alphabetically by destination type.
+sql: |
+  SELECT d.destination_type,
+         ROUND((SUM(c.claim_amount) / NULLIF(SUM(p.trip_cost), 0))::numeric, 4) AS loss_ratio
+  FROM bookings b
+  JOIN destinations d ON b.destination_id = d.id
+  JOIN policies p ON p.booking_id = b.id
+  LEFT JOIN claims c ON c.policy_id = p.id
+  GROUP BY d.destination_type
+  ORDER BY d.destination_type
