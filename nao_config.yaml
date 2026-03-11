@@ -1,0 +1,19 @@
+project_name: travelers-insurance
+
+databases:
+- name: supabase-travelers
+  type: postgres
+  host: db.hevfinkbgeapcpnlmvec.supabase.co
+  port: 5432
+  database: postgres
+  user: postgres
+  password: ${{ env('PG_PASS') }}
+  schema_name: public
+  accessors:
+  - columns
+  - description
+  - preview
+
+llm:
+  provider: anthropic
+  api_key: ${{ env('ANTHROPIC_API_KEY') }}
