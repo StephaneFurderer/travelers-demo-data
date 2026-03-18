@@ -7,7 +7,7 @@ interface Props {
   data: { name: string; value: number }[];
 }
 
-const COLORS = ["#3b82f6", "#f97316", "#10b981"];
+const COLORS = ["#f59e0b", "#3b82f6", "#8b5cf6"]; // hotel_only, flight_only, hotel_and_flight
 
 export function CoverageDonutChart({ data }: Props) {
   return (

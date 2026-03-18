@@ -39,8 +39,8 @@ export function PremiumBySegmentChart({ data }: Props) {
             <YAxis tickFormatter={formatCurrency} fontSize={12} />
             <Tooltip formatter={(v) => `$${Number(v).toLocaleString()}`} />
             <Legend />
-            <Bar dataKey="hotel" stackId="a" fill="#3b82f6" name="Hotel" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="flight" stackId="a" fill="#f97316" name="Flight" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="hotel" stackId="a" fill="var(--product-hotel, #f59e0b)" name="Hotel" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="flight" stackId="a" fill="var(--product-flight, #3b82f6)" name="Flight" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

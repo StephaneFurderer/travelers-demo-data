@@ -72,6 +72,19 @@
   --chart-4: oklch(0.488 0.243 264.376);
   --chart-5: oklch(0.424 0.199 265.638);
   --radius: 0.625rem;
+  /* Product colors */
+  --product-hotel: #f59e0b;
+  --product-hotel-light: #fef3c7;
+  --product-flight: #3b82f6;
+  --product-flight-light: #dbeafe;
+  /* Segment colors */
+  --segment-winter-birds: #6366f1;
+  --segment-holiday: #f97316;
+  --segment-baseline: #10b981;
+  /* Semantic colors */
+  --status-good: #10b981;
+  --status-watch: #f59e0b;
+  --status-alert: #ef4444;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
