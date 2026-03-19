@@ -5,15 +5,15 @@ import { NextRequest, NextResponse } from "next/server";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 function buildSummary(data: any, bookings: any[], policies: any[], claims: any[]) {
-  const totalPurePremium = bookings.reduce((s: number, b: any) => s + b.pure_premium, 0);
+  const totalCommercialPremium = bookings.reduce((s: number, b: any) => s + b.commercial_premium, 0);
   const claimRate = policies.length > 0 ? claims.length / policies.length : 0;
 
   const premiumBySegment: Record<string, { hotel: number; flight: number }> = {};
   for (const b of bookings) {
     if (!premiumBySegment[b.segment]) premiumBySegment[b.segment] = { hotel: 0, flight: 0 };
-    if (b.coverage_type === "hotel_only") premiumBySegment[b.segment].hotel += b.pure_premium;
-    else if (b.coverage_type === "flight_only") premiumBySegment[b.segment].flight += b.pure_premium;
-    else { premiumBySegment[b.segment].hotel += b.pure_premium * 0.6; premiumBySegment[b.segment].flight += b.pure_premium * 0.4; }
+    if (b.coverage_type === "hotel_only") premiumBySegment[b.segment].hotel += b.commercial_premium;
+    else if (b.coverage_type === "flight_only") premiumBySegment[b.segment].flight += b.commercial_premium;
+    else { premiumBySegment[b.segment].hotel += b.commercial_premium * 0.6; premiumBySegment[b.segment].flight += b.commercial_premium * 0.4; }
   }
 
   const bookingsByMonth: Record<string, Record<string, number>> = {};
@@ -37,7 +37,7 @@ function buildSummary(data: any, bookings: any[], policies: any[], claims: any[]
   for (const b of bookings) {
     const month = b.departure_date.substring(0, 7);
     if (!monthlyPL[month]) monthlyPL[month] = { premium: 0, incurred: 0 };
-    monthlyPL[month].premium += b.pure_premium;
+    monthlyPL[month].premium += b.commercial_premium;
   }
   for (const c of claims) {
     const month = policyBookingMonth.get(c.policy_id);
@@ -55,18 +55,18 @@ function buildSummary(data: any, bookings: any[], policies: any[], claims: any[]
     productAgg[p.product_id].totalTripCost += p.trip_cost;
   }
   for (const b of bookings) {
-    // Attribute pure_premium to products based on coverage
+    // Attribute commercial_premium to products based on coverage
     if (b.coverage_type === "hotel_only") {
       if (!productAgg[1]) productAgg[1] = { policyCount: 0, totalPremium: 0, totalTripCost: 0, claimCount: 0 };
-      productAgg[1].totalPremium += b.pure_premium;
+      productAgg[1].totalPremium += b.commercial_premium;
     } else if (b.coverage_type === "flight_only") {
       if (!productAgg[2]) productAgg[2] = { policyCount: 0, totalPremium: 0, totalTripCost: 0, claimCount: 0 };
-      productAgg[2].totalPremium += b.pure_premium;
+      productAgg[2].totalPremium += b.commercial_premium;
     } else {
       if (!productAgg[1]) productAgg[1] = { policyCount: 0, totalPremium: 0, totalTripCost: 0, claimCount: 0 };
       if (!productAgg[2]) productAgg[2] = { policyCount: 0, totalPremium: 0, totalTripCost: 0, claimCount: 0 };
-      productAgg[1].totalPremium += b.pure_premium * 0.6;
-      productAgg[2].totalPremium += b.pure_premium * 0.4;
+      productAgg[1].totalPremium += b.commercial_premium * 0.6;
+      productAgg[2].totalPremium += b.commercial_premium * 0.4;
     }
   }
   // Count claims per product
@@ -158,7 +158,7 @@ function buildSummary(data: any, bookings: any[], policies: any[], claims: any[]
   });
 
   return {
-    kpis: { totalBookings: bookings.length, totalPolicies: policies.length, totalPurePremium, claimRate },
+    kpis: { totalBookings: bookings.length, totalPolicies: policies.length, totalCommercialPremium, claimRate },
     premiumBySegment: Object.entries(premiumBySegment).map(([segment, vals]) => ({ segment, hotel: Math.round(vals.hotel), flight: Math.round(vals.flight) })),
     bookingsByMonth: Object.entries(bookingsByMonth).sort(([a], [b]) => a.localeCompare(b)).map(([month, segs]) => ({ month, winter_birds: segs.winter_birds || 0, holiday_travelers: segs.holiday_travelers || 0, baseline: segs.baseline || 0 })),
     coverageSplit: Object.entries(coverageSplit).map(([type, count]) => ({ name: type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()), value: count })),
@@ -214,22 +214,13 @@ function buildGeographic(data: any, bookings: any[], policies: any[]) {
 function buildClaims(bookings: any[], policies: any[], claims: any[]) {
   const totalIncurred = claims.reduce((s: number, c: any) => s + c.claim_amount, 0);
   const avgSeverity = claims.length > 0 ? totalIncurred / claims.length : 0;
-  const preDeparture = claims.filter((c: any) => c.claim_type === "pre_departure").length;
-  const postDeparture = claims.filter((c: any) => c.claim_type === "post_departure").length;
-
-  const bySubtype: Record<string, { count: number; amount: number }> = {};
-  for (const c of claims) {
-    if (!bySubtype[c.claim_subtype]) bySubtype[c.claim_subtype] = { count: 0, amount: 0 };
-    bySubtype[c.claim_subtype].count += 1;
-    bySubtype[c.claim_subtype].amount += c.claim_amount;
-  }
 
   const policyToBooking = new Map(policies.map((p: any) => [p.id, p.booking_id]));
   const bookingMap = new Map(bookings.map((b: any) => [b.id, b]));
   const stateData: Record<string, { premium: number; incurred: number; claims: number }> = {};
   for (const b of bookings) {
     if (!stateData[b.state_of_residence]) stateData[b.state_of_residence] = { premium: 0, incurred: 0, claims: 0 };
-    stateData[b.state_of_residence].premium += b.pure_premium;
+    stateData[b.state_of_residence].premium += b.commercial_premium;
   }
   for (const c of claims) {
     const bookingId = policyToBooking.get(c.policy_id);
@@ -246,8 +237,7 @@ function buildClaims(bookings: any[], policies: any[], claims: any[]) {
   for (const c of claims) { const month = c.claim_date.substring(0, 7); claimsByMonth[month] = (claimsByMonth[month] || 0) + 1; }
 
   return {
-    kpis: { totalIncurred, avgSeverity, preDeparture, postDeparture, totalClaims: claims.length },
-    bySubtype: Object.entries(bySubtype).map(([subtype, d]) => ({ subtype: subtype.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()), count: d.count, amount: Math.round(d.amount) })),
+    kpis: { totalIncurred, avgSeverity, totalClaims: claims.length },
     lossRatioByState: Object.entries(stateData).map(([state, d]) => ({ state, premium: Math.round(d.premium), incurred: Math.round(d.incurred), lossRatio: d.premium > 0 ? d.incurred / d.premium : 0, claims: d.claims })).sort((a, b) => b.lossRatio - a.lossRatio),
     claimsByMonth: Object.entries(claimsByMonth).sort(([a], [b]) => a.localeCompare(b)).map(([month, count]) => ({ month, count })),
   };

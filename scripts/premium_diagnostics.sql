@@ -2,6 +2,52 @@
 -- Premium Diagnostics — run each query separately in Supabase SQL Editor
 -- ============================================================
 
+
+-- 0. LOSS RATIO by departure year and month
+-- loss_ratio = sum(claim_amount) / sum(commercial_premium)
+WITH policy_stats AS (
+  SELECT
+    extract(year FROM b.departure_date)::int   AS dep_year,
+    extract(month FROM b.departure_date)::int  AS dep_month,
+    p.id AS policy_id,
+    p.pure_premium,
+    p.commercial_premium
+  FROM policies p
+  JOIN bookings b ON b.id = p.booking_id
+),
+year_month_premium AS (
+  SELECT dep_year, dep_month,
+    count(*)                AS n_policies,
+    sum(pure_premium)       AS total_pp,
+    sum(commercial_premium) AS total_cp
+  FROM policy_stats
+  GROUP BY dep_year, dep_month
+),
+year_month_claims AS (
+  SELECT
+    extract(year FROM b.departure_date)::int   AS dep_year,
+    extract(month FROM b.departure_date)::int  AS dep_month,
+    count(*)              AS n_claims,
+    sum(c.claim_amount)   AS total_incurred
+  FROM claims c
+  JOIN policies p ON p.id = c.policy_id
+  JOIN bookings b ON b.id = p.booking_id
+  GROUP BY dep_year, dep_month
+)
+SELECT
+  ymp.dep_year,
+  ymp.dep_month,
+  ymp.n_policies,
+  coalesce(ymc.n_claims, 0)                                              AS n_claims,
+  round(ymp.total_pp::numeric, 2)                                        AS total_pure_premium,
+  round(ymp.total_cp::numeric, 2)                                        AS total_commercial_premium,
+  round(coalesce(ymc.total_incurred, 0)::numeric, 2)                     AS total_incurred,
+  round((coalesce(ymc.total_incurred, 0) / ymp.total_cp * 100)::numeric, 1) AS loss_ratio_pct
+FROM year_month_premium ymp
+LEFT JOIN year_month_claims ymc
+  ON ymc.dep_year = ymp.dep_year AND ymc.dep_month = ymp.dep_month
+ORDER BY ymp.dep_year, ymp.dep_month;
+
 -- 1. DISTRIBUTION STATS — booking-level pure_premium
 -- Expected range: $2–$50 typical, outliers possible for extreme risk profiles
 SELECT

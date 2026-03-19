@@ -27,7 +27,6 @@ import { Filters } from "@/components/filters";
 import { PremiumBySegmentChart } from "@/components/charts/premium-by-segment";
 import { BookingsByMonthChart } from "@/components/charts/bookings-by-month";
 import { CoverageDonutChart } from "@/components/charts/coverage-donut";
-import { ClaimsBySubtypeChart } from "@/components/charts/claims-by-subtype";
 import { ClaimsByMonthChart } from "@/components/charts/claims-by-month";
 import { MonthlyPLChart } from "@/components/charts/monthly-pl";
 import { CoefficientTable } from "@/components/pricing/coefficient-table";
@@ -237,8 +236,8 @@ export default function DashboardPage() {
                       value={summaryData.kpis.totalPolicies.toLocaleString()}
                     />
                     <KpiCard
-                      title="Total Pure Premium"
-                      value={fmt(summaryData.kpis.totalPurePremium)}
+                      title="Commercial Premium"
+                      value={fmt(summaryData.kpis.totalCommercialPremium)}
                     />
                   </div>
                 </div>
@@ -650,7 +649,11 @@ export default function DashboardPage() {
               <LoadingSpinner />
             ) : claimsData ? (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <KpiCard
+                    title="Total Claims"
+                    value={claimsData.kpis.totalClaims.toLocaleString()}
+                  />
                   <KpiCard
                     title="Total Incurred"
                     value={fmt(claimsData.kpis.totalIncurred)}
@@ -659,19 +662,8 @@ export default function DashboardPage() {
                     title="Average Severity"
                     value={fmt(claimsData.kpis.avgSeverity)}
                   />
-                  <KpiCard
-                    title="Pre-Departure Claims"
-                    value={claimsData.kpis.preDeparture.toLocaleString()}
-                    subtitle={`${pct(claimsData.kpis.preDeparture / claimsData.kpis.totalClaims)} of total`}
-                  />
-                  <KpiCard
-                    title="Post-Departure Claims"
-                    value={claimsData.kpis.postDeparture.toLocaleString()}
-                    subtitle={`${pct(claimsData.kpis.postDeparture / claimsData.kpis.totalClaims)} of total`}
-                  />
                 </div>
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                  <ClaimsBySubtypeChart data={claimsData.bySubtype} />
+                <div className="grid grid-cols-1 gap-6">
                   <ClaimsByMonthChart data={claimsData.claimsByMonth} />
                 </div>
                 <Card>

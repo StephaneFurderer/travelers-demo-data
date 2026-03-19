@@ -132,23 +132,12 @@ SEV_GLM = {
 
 # ── Claim Parameters ─────────────────────────────────────────────────────────
 
-PRE_DEPARTURE_PROB = 0.30   # 30% pre-departure, 70% post-departure
 SEVERITY_NOISE_STD = 0.30
 MAX_FREQUENCY = 0.15        # cap claim probability at 15%
 
-# Pre-departure cancellation
-CANCELLATION_COST_FACTOR = 0.80
-CANCELLATION_NOISE_STD = 0.05
+# ── Commercial Premium ──────────────────────────────────────────────────────
 
-# Post-departure delay
-DELAY_LAMBDA = 2
-DELAY_MAX_DAYS = 7
-DELAY_COST_PER_DAY = 300
-
-# Post-departure interruption
-INTERRUPTION_REMAINING_LOW = 0.30
-INTERRUPTION_REMAINING_HIGH = 0.80
-INTERRUPTION_COST_FACTOR = 0.70
+EXPENSE_LOAD_FACTOR = 1.11  # 11% expense load on top of pure premium
 
 # ── Batch Insert Size ────────────────────────────────────────────────────────
 

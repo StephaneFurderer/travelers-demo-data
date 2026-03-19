@@ -12,6 +12,7 @@ export interface Booking {
   num_nights: number;
   coverage_type: string;
   pure_premium: number;
+  commercial_premium: number;
 }
 
 export interface Destination {
@@ -35,14 +36,14 @@ export interface Policy {
   origin_airport: string | null;
   destination_airport: string | null;
   base_frequency: number;
+  expected_loss: number;
   pure_premium: number;
+  commercial_premium: number;
 }
 
 export interface Claim {
   id: number;
   policy_id: number;
-  claim_type: string;
-  claim_subtype: string;
   claim_date: string;
   claim_amount: number;
 }
@@ -69,9 +70,9 @@ async function loadAll(): Promise<CachedData> {
 
   const [destinations, bookings, policies, claims] = await Promise.all([
     supabase.from("destinations").select("*").then(r => r.data as Destination[]),
-    fetchAll(() => supabase.from("bookings").select("id, segment, destination_id, age, state_of_residence, purchase_date, departure_date, return_date, num_nights, coverage_type, pure_premium")),
-    fetchAll(() => supabase.from("policies").select("id, booking_id, product_id, trip_cost, price_per_night, flight_price, origin_airport, destination_airport, base_frequency, pure_premium")),
-    fetchAll(() => supabase.from("claims").select("id, policy_id, claim_type, claim_subtype, claim_date, claim_amount")),
+    fetchAll(() => supabase.from("bookings").select("id, segment, destination_id, age, state_of_residence, purchase_date, departure_date, return_date, num_nights, coverage_type, pure_premium, commercial_premium")),
+    fetchAll(() => supabase.from("policies").select("id, booking_id, product_id, trip_cost, price_per_night, flight_price, origin_airport, destination_airport, base_frequency, expected_loss, pure_premium, commercial_premium")),
+    fetchAll(() => supabase.from("claims").select("id, policy_id, claim_date, claim_amount")),
   ]);
 
   // Build lookup maps

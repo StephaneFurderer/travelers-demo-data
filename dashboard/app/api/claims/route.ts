@@ -11,16 +11,6 @@ export async function GET(req: NextRequest) {
   // KPIs
   const totalIncurred = claims.reduce((s, c) => s + c.claim_amount, 0);
   const avgSeverity = claims.length > 0 ? totalIncurred / claims.length : 0;
-  const preDeparture = claims.filter(c => c.claim_type === "pre_departure").length;
-  const postDeparture = claims.filter(c => c.claim_type === "post_departure").length;
-
-  // Claims by subtype
-  const bySubtype: Record<string, { count: number; amount: number }> = {};
-  for (const c of claims) {
-    if (!bySubtype[c.claim_subtype]) bySubtype[c.claim_subtype] = { count: 0, amount: 0 };
-    bySubtype[c.claim_subtype].count += 1;
-    bySubtype[c.claim_subtype].amount += c.claim_amount;
-  }
 
   // Loss ratio by state
   const policyToBooking = new Map(policies.map(p => [p.id, p.booking_id]));
@@ -29,7 +19,7 @@ export async function GET(req: NextRequest) {
   const stateData: Record<string, { premium: number; incurred: number; claims: number }> = {};
   for (const b of bookings) {
     if (!stateData[b.state_of_residence]) stateData[b.state_of_residence] = { premium: 0, incurred: 0, claims: 0 };
-    stateData[b.state_of_residence].premium += b.pure_premium;
+    stateData[b.state_of_residence].premium += b.commercial_premium;
   }
   for (const c of claims) {
     const bookingId = policyToBooking.get(c.policy_id);
@@ -63,15 +53,8 @@ export async function GET(req: NextRequest) {
     kpis: {
       totalIncurred,
       avgSeverity,
-      preDeparture,
-      postDeparture,
       totalClaims: claims.length,
     },
-    bySubtype: Object.entries(bySubtype).map(([subtype, d]) => ({
-      subtype: subtype.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-      count: d.count,
-      amount: Math.round(d.amount),
-    })),
     lossRatioByState,
     claimsByMonth: Object.entries(claimsByMonth)
       .sort(([a], [b]) => a.localeCompare(b))

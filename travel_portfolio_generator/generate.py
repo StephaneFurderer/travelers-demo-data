@@ -148,16 +148,13 @@ def main():
     print(f"  Hotel (1):  {prod_counts.get(1, 0):>8,}")
     print(f"  Flight (2): {prod_counts.get(2, 0):>8,}")
 
-    # Claim breakdown
+    # Claim stats
     if claim_rows:
-        print("\nClaims by type:")
-        type_counts = Counter(c["claim_type"] for c in claim_rows)
-        for ct, cnt in type_counts.items():
-            print(f"  {ct:25s}: {cnt:>6,}")
-        print("\nClaims by subtype:")
-        sub_counts = Counter(c["claim_subtype"] for c in claim_rows)
-        for st, cnt in sub_counts.items():
-            print(f"  {st:25s}: {cnt:>6,}")
+        amounts = [c["claim_amount"] for c in claim_rows]
+        print(f"\nClaim amount stats:")
+        print(f"  Mean:   ${np.mean(amounts):>10,.2f}")
+        print(f"  Median: ${np.median(amounts):>10,.2f}")
+        print(f"  Total:  ${sum(amounts):>12,.2f}")
 
 
 if __name__ == "__main__":

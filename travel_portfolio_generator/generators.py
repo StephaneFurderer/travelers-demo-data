@@ -6,11 +6,8 @@ from config import (
     COVERAGE_WEIGHTS, MONTH_WEIGHTS, AGE_PARAMS, DURATION_PARAMS,
     ADVANCE_PARAMS, STATE_WEIGHTS, STATE_AIRPORTS,
     DESTINATION_TYPE_WEIGHTS, PEAK_MONTHS,
-    FREQ_GLM, SEV_GLM, PRE_DEPARTURE_PROB, MAX_FREQUENCY,
-    SEVERITY_NOISE_STD, CANCELLATION_COST_FACTOR, CANCELLATION_NOISE_STD,
-    DELAY_LAMBDA, DELAY_MAX_DAYS, DELAY_COST_PER_DAY,
-    INTERRUPTION_REMAINING_LOW, INTERRUPTION_REMAINING_HIGH,
-    INTERRUPTION_COST_FACTOR,
+    FREQ_GLM, SEV_GLM, MAX_FREQUENCY,
+    SEVERITY_NOISE_STD, EXPENSE_LOAD_FACTOR,
 )
 
 
@@ -154,105 +151,40 @@ class PortfolioGenerator:
 
         return min(np.exp(log_lambda), MAX_FREQUENCY)
 
-    # ── GLM severity ─────────────────────────────────────────────────────────
+    # ── GLM expected severity ─────────────────────────────────────────────────
 
-    def _compute_severity(self, age: int, trip_cost: float,
-                          is_flight: bool, is_post_departure: bool) -> float:
+    def _compute_expected_severity(self, age: int, trip_cost: float,
+                                   is_flight: bool) -> float:
+        """E[severity] from the severity GLM — no noise, no pre/post split."""
         log_sev = SEV_GLM["intercept"]
         log_sev += SEV_GLM["age"] * (age - 40) / 10
         log_sev += SEV_GLM["log_trip_cost"] * np.log(max(trip_cost, 1))
         if is_flight:
             log_sev += SEV_GLM["product_flight"]
-        if is_post_departure:
-            log_sev += SEV_GLM["post_departure"]
-        noise = self.rng.normal(0, SEVERITY_NOISE_STD)
-        return np.exp(log_sev + noise)
-
-    def _compute_expected_severity(self, age: int, trip_cost: float,
-                                   is_flight: bool) -> float:
-        """E[severity] from the severity GLM — no noise, blended across
-        claim types (30% pre-departure, 70% post-departure)."""
-        log_sev_base = SEV_GLM["intercept"]
-        log_sev_base += SEV_GLM["age"] * (age - 40) / 10
-        log_sev_base += SEV_GLM["log_trip_cost"] * np.log(max(trip_cost, 1))
-        if is_flight:
-            log_sev_base += SEV_GLM["product_flight"]
         # For log-normal E[X] = exp(mu + sigma^2/2)
         half_var = (SEVERITY_NOISE_STD ** 2) / 2
-        e_sev_pre = np.exp(log_sev_base + half_var)
-        e_sev_post = np.exp(log_sev_base + SEV_GLM["post_departure"] + half_var)
-        return PRE_DEPARTURE_PROB * e_sev_pre + (1 - PRE_DEPARTURE_PROB) * e_sev_post
+        return np.exp(log_sev + half_var)
 
     # ── Claim generation ─────────────────────────────────────────────────────
 
-    def _gen_claim(self, policy: dict, booking: dict,
+    def _gen_claim(self, policy: dict,
                    purchase_date: date, departure_date: date,
                    return_date: date) -> dict | None:
-        freq = policy["base_frequency"]
-        if self.rng.random() >= freq:
+        """Bernoulli draw on base_frequency; if claim, amount = expected_loss."""
+        if self.rng.random() >= policy["base_frequency"]:
             return None
 
-        is_pre = self.rng.random() < PRE_DEPARTURE_PROB
-        trip_cost = policy["trip_cost"]
-        is_flight = policy["product_id"] == 2
+        # Random claim date within the trip window (purchase → return)
+        days_range = (return_date - purchase_date).days
+        if days_range <= 0:
+            days_range = 1
+        offset = int(self.rng.integers(0, days_range))
+        claim_date = purchase_date + timedelta(days=offset)
 
-        if is_pre:
-            # Pre-departure cancellation
-            claim_type = "pre_departure"
-            claim_subtype = "cancellation"
-            noise = 1 + self.rng.normal(0, CANCELLATION_NOISE_STD)
-            amount = round(trip_cost * CANCELLATION_COST_FACTOR * max(noise, 0.5), 2)
-            # Claim date between purchase and departure
-            days_range = (departure_date - purchase_date).days
-            if days_range <= 0:
-                days_range = 1
-            offset = int(self.rng.integers(0, days_range))
-            claim_date = purchase_date + timedelta(days=offset)
-            return {
-                "claim_type": claim_type,
-                "claim_subtype": claim_subtype,
-                "claim_date": claim_date.isoformat(),
-                "claim_amount": amount,
-                "days_delayed": None,
-                "hurricane_event_id": None,
-            }
-        else:
-            # Post-departure: 50/50 delay vs interruption
-            claim_type = "post_departure"
-            days_range = (return_date - departure_date).days
-            if days_range <= 0:
-                days_range = 1
-            offset = int(self.rng.integers(0, days_range))
-            claim_date = departure_date + timedelta(days=offset)
-
-            if self.rng.random() < 0.5:
-                # Trip delay
-                claim_subtype = "trip_delay"
-                days_delayed = min(int(self.rng.poisson(DELAY_LAMBDA) + 1), DELAY_MAX_DAYS)
-                amount = round(DELAY_COST_PER_DAY * days_delayed, 2)
-                return {
-                    "claim_type": claim_type,
-                    "claim_subtype": claim_subtype,
-                    "claim_date": claim_date.isoformat(),
-                    "claim_amount": amount,
-                    "days_delayed": days_delayed,
-                    "hurricane_event_id": None,
-                }
-            else:
-                # Trip interruption
-                claim_subtype = "trip_interruption"
-                remaining_pct = self.rng.uniform(
-                    INTERRUPTION_REMAINING_LOW, INTERRUPTION_REMAINING_HIGH
-                )
-                amount = round(trip_cost * remaining_pct * INTERRUPTION_COST_FACTOR, 2)
-                return {
-                    "claim_type": claim_type,
-                    "claim_subtype": claim_subtype,
-                    "claim_date": claim_date.isoformat(),
-                    "claim_amount": amount,
-                    "days_delayed": None,
-                    "hurricane_event_id": None,
-                }
+        return {
+            "claim_date": claim_date.isoformat(),
+            "claim_amount": round(policy["expected_loss"], 2),
+        }
 
     # ── Generate one booking + its policies + claims ─────────────────────────
 
@@ -297,6 +229,7 @@ class PortfolioGenerator:
             )
             e_sev = self._compute_expected_severity(age, hotel_cost, False)
             pp = round(freq * e_sev, 2)
+            cp = round(pp * EXPENSE_LOAD_FACTOR, 2)
             hotel_policy = {
                 "product_id": 1,
                 "trip_cost": hotel_cost,
@@ -307,11 +240,13 @@ class PortfolioGenerator:
                 "outbound_flight_date": None,
                 "return_flight_date": None,
                 "base_frequency": round(freq, 6),
+                "expected_loss": round(e_sev, 2),
                 "pure_premium": pp,
+                "commercial_premium": cp,
             }
             policies.append(hotel_policy)
 
-            claim = self._gen_claim(hotel_policy, booking,
+            claim = self._gen_claim(hotel_policy,
                                     purchase_date, departure_date, return_date)
             if claim:
                 claim["_policy_idx"] = len(policies) - 1
@@ -326,6 +261,7 @@ class PortfolioGenerator:
             )
             e_sev = self._compute_expected_severity(age, flight_cost, True)
             pp = round(freq * e_sev, 2)
+            cp = round(pp * EXPENSE_LOAD_FACTOR, 2)
             flight_policy = {
                 "product_id": 2,
                 "trip_cost": flight_cost,
@@ -336,16 +272,19 @@ class PortfolioGenerator:
                 "outbound_flight_date": departure_date.isoformat(),
                 "return_flight_date": return_date.isoformat(),
                 "base_frequency": round(freq, 6),
+                "expected_loss": round(e_sev, 2),
                 "pure_premium": pp,
+                "commercial_premium": cp,
             }
             policies.append(flight_policy)
 
-            claim = self._gen_claim(flight_policy, booking,
+            claim = self._gen_claim(flight_policy,
                                     purchase_date, departure_date, return_date)
             if claim:
                 claim["_policy_idx"] = len(policies) - 1
                 claims.append(claim)
 
         booking["pure_premium"] = round(sum(p["pure_premium"] for p in policies), 2)
+        booking["commercial_premium"] = round(sum(p["commercial_premium"] for p in policies), 2)
 
         return booking, policies, claims

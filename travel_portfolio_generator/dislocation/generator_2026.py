@@ -12,11 +12,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from generators import PortfolioGenerator
 from config import (
-    FREQ_GLM, SEV_GLM, PRE_DEPARTURE_PROB, MAX_FREQUENCY,
-    SEVERITY_NOISE_STD, CANCELLATION_COST_FACTOR, CANCELLATION_NOISE_STD,
-    DELAY_LAMBDA, DELAY_MAX_DAYS, DELAY_COST_PER_DAY,
-    INTERRUPTION_REMAINING_LOW, INTERRUPTION_REMAINING_HIGH,
-    INTERRUPTION_COST_FACTOR, ADVANCE_PARAMS,
+    FREQ_GLM, SEV_GLM, MAX_FREQUENCY,
+    SEVERITY_NOISE_STD, ADVANCE_PARAMS,
 )
 from dislocation.config_2026 import FREQ_GLM_2026, SEV_GLM_2026
 
@@ -86,87 +83,27 @@ class DislocatedPortfolioGenerator(PortfolioGenerator):
 
         return min(np.exp(log_lambda), MAX_FREQUENCY)
 
-    # ── 2026 actual severity (shifted GLM) ──────────────────────────────────
-
-    def _compute_severity_2026(self, age: int, trip_cost: float,
-                                is_flight: bool, is_post_departure: bool) -> float:
-        """Compute severity using 2026 shifted coefficients."""
-        log_sev = SEV_GLM_2026["intercept"]
-        log_sev += SEV_GLM_2026["age"] * (age - 40) / 10
-        log_sev += SEV_GLM_2026["log_trip_cost"] * np.log(max(trip_cost, 1))
-        if is_flight:
-            log_sev += SEV_GLM_2026["product_flight"]
-        if is_post_departure:
-            log_sev += SEV_GLM_2026["post_departure"]
-        noise = self.rng.normal(0, SEVERITY_NOISE_STD)
-        return np.exp(log_sev + noise)
-
-    # ── Generate claim using 2026 reality ───────────────────────────────────
-    # Severity inflation factor: exp(3.12)/exp(3.0) ≈ 1.127 (12.7%)
+    # ── Severity inflation: exp(3.12)/exp(3.0) ≈ 1.127 (12.7%) ────────────
     SEVERITY_INFLATION = np.exp(SEV_GLM_2026["intercept"]) / np.exp(SEV_GLM["intercept"])
 
-    def _gen_claim_2026(self, freq_2026: float, policy: dict, booking: dict,
+    def _gen_claim_2026(self, freq_2026: float, policy: dict,
                         purchase_date: date, departure_date: date,
                         return_date: date) -> dict | None:
         """Generate a claim using 2026 actual frequency + inflated severity."""
         if self.rng.random() >= freq_2026:
             return None
 
-        is_pre = self.rng.random() < PRE_DEPARTURE_PROB
-        trip_cost = policy["trip_cost"]
+        # Random claim date within the trip window
+        days_range = (return_date - purchase_date).days
+        if days_range <= 0:
+            days_range = 1
+        offset = int(self.rng.integers(0, days_range))
+        claim_date = purchase_date + timedelta(days=offset)
 
-        if is_pre:
-            claim_type = "pre_departure"
-            claim_subtype = "cancellation"
-            noise = 1 + self.rng.normal(0, CANCELLATION_NOISE_STD)
-            amount = round(trip_cost * CANCELLATION_COST_FACTOR * max(noise, 0.5) * self.SEVERITY_INFLATION, 2)
-            days_range = (departure_date - purchase_date).days
-            if days_range <= 0:
-                days_range = 1
-            offset = int(self.rng.integers(0, days_range))
-            claim_date = purchase_date + timedelta(days=offset)
-            return {
-                "claim_type": claim_type,
-                "claim_subtype": claim_subtype,
-                "claim_date": claim_date.isoformat(),
-                "claim_amount": amount,
-                "days_delayed": None,
-                "hurricane_event_id": None,
-            }
-        else:
-            claim_type = "post_departure"
-            days_range = (return_date - departure_date).days
-            if days_range <= 0:
-                days_range = 1
-            offset = int(self.rng.integers(0, days_range))
-            claim_date = departure_date + timedelta(days=offset)
-
-            if self.rng.random() < 0.5:
-                claim_subtype = "trip_delay"
-                days_delayed = min(int(self.rng.poisson(DELAY_LAMBDA) + 1), DELAY_MAX_DAYS)
-                amount = round(DELAY_COST_PER_DAY * days_delayed * self.SEVERITY_INFLATION, 2)
-                return {
-                    "claim_type": claim_type,
-                    "claim_subtype": claim_subtype,
-                    "claim_date": claim_date.isoformat(),
-                    "claim_amount": amount,
-                    "days_delayed": days_delayed,
-                    "hurricane_event_id": None,
-                }
-            else:
-                claim_subtype = "trip_interruption"
-                remaining_pct = self.rng.uniform(
-                    INTERRUPTION_REMAINING_LOW, INTERRUPTION_REMAINING_HIGH
-                )
-                amount = round(trip_cost * remaining_pct * INTERRUPTION_COST_FACTOR * self.SEVERITY_INFLATION, 2)
-                return {
-                    "claim_type": claim_type,
-                    "claim_subtype": claim_subtype,
-                    "claim_date": claim_date.isoformat(),
-                    "claim_amount": amount,
-                    "days_delayed": None,
-                    "hurricane_event_id": None,
-                }
+        return {
+            "claim_date": claim_date.isoformat(),
+            "claim_amount": round(policy["expected_loss"] * self.SEVERITY_INFLATION, 2),
+        }
 
     # ── Override generate_booking ───────────────────────────────────────────
 
@@ -191,7 +128,7 @@ class DislocatedPortfolioGenerator(PortfolioGenerator):
                 dest_type
             )
             claim = self._gen_claim_2026(
-                freq_2026, pol, booking,
+                freq_2026, pol,
                 purchase_date, departure_date, return_date
             )
             if claim:

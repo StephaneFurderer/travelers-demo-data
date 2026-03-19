@@ -35,7 +35,8 @@ CREATE TABLE bookings (
     return_date date NOT NULL,
     num_nights int NOT NULL,
     coverage_type text NOT NULL CHECK (coverage_type IN ('hotel_only', 'flight_only', 'hotel_and_flight')),
-    pure_premium float NOT NULL
+    pure_premium float NOT NULL,
+    commercial_premium float NOT NULL
 );
 
 CREATE TABLE policies (
@@ -50,18 +51,16 @@ CREATE TABLE policies (
     outbound_flight_date date,
     return_flight_date date,
     base_frequency float NOT NULL,
-    pure_premium float NOT NULL
+    expected_loss float NOT NULL,
+    pure_premium float NOT NULL,
+    commercial_premium float NOT NULL
 );
 
 CREATE TABLE claims (
     id serial PRIMARY KEY,
     policy_id int NOT NULL REFERENCES policies(id),
-    claim_type text NOT NULL CHECK (claim_type IN ('pre_departure', 'post_departure')),
-    claim_subtype text NOT NULL CHECK (claim_subtype IN ('cancellation', 'trip_delay', 'trip_interruption')),
     claim_date date NOT NULL,
-    claim_amount float NOT NULL,
-    days_delayed int,
-    hurricane_event_id text
+    claim_amount float NOT NULL
 );
 
 -- Indexes for common queries
@@ -71,4 +70,3 @@ CREATE INDEX idx_bookings_state ON bookings(state_of_residence);
 CREATE INDEX idx_policies_booking ON policies(booking_id);
 CREATE INDEX idx_policies_product ON policies(product_id);
 CREATE INDEX idx_claims_policy ON claims(policy_id);
-CREATE INDEX idx_claims_type ON claims(claim_type);
