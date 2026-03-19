@@ -50,7 +50,7 @@ FREQ_DESCRIPTIONS = {
 }
 
 SEV_DESCRIPTIONS = {
-    "intercept": "Gamma GLM intercept (log scale) — base severity ~$245",
+    "intercept": "Gamma GLM intercept (log scale) — base severity ~$20",
     "age": "Age effect per unit of (age-40)/10 — older claimants more severe",
     "log_trip_cost": "Trip cost effect (log scale) — most important severity driver",
     "product_flight": "Flight product indicator — flight claims less severe than hotel",

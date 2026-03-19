@@ -16,6 +16,19 @@ def main():
     print("Connecting to Supabase...")
     client = get_client()
 
+    # ── Step 0: Clear existing data (FK order: claims → policies → bookings) ─
+    print("\n── Clearing existing data ──")
+    for table in ["claims", "policies", "bookings"]:
+        # Delete in batches to avoid statement timeout on large tables
+        while True:
+            resp = client.table(table).select("id").limit(5000).execute()
+            if not resp.data:
+                break
+            ids = [r["id"] for r in resp.data]
+            client.table(table).delete().in_("id", ids).execute()
+            print(f"  Deleted {len(ids)} from {table}...")
+        print(f"  ✓ {table} cleared")
+
     # ── Step 1: Reference data ───────────────────────────────────────────────
     print("\n── Inserting reference data ──")
     insert_products(client)

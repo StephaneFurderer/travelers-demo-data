@@ -123,9 +123,9 @@ FREQ_GLM = {
 # ── Severity GLM Coefficients ────────────────────────────────────────────────
 
 SEV_GLM = {
-    "intercept": 5.5,          # ~$245 base severity
+    "intercept": 3.0,          # ~$20 base severity
     "age": 0.01,               # per unit of (age - 40) / 10
-    "log_trip_cost": 0.60,
+    "log_trip_cost": 0.40,
     "product_flight": -0.20,
     "post_departure": -0.30,
 }

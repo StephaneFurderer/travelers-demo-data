@@ -102,8 +102,8 @@ class DislocatedPortfolioGenerator(PortfolioGenerator):
         return np.exp(log_sev + noise)
 
     # ── Generate claim using 2026 reality ───────────────────────────────────
-    # Severity inflation factor: exp(5.62)/exp(5.5) ≈ 1.127 (12.7%)
-    SEVERITY_INFLATION = np.exp(SEV_GLM_2026["intercept"]) / np.exp(5.5)
+    # Severity inflation factor: exp(3.12)/exp(3.0) ≈ 1.127 (12.7%)
+    SEVERITY_INFLATION = np.exp(SEV_GLM_2026["intercept"]) / np.exp(SEV_GLM["intercept"])
 
     def _gen_claim_2026(self, freq_2026: float, policy: dict, booking: dict,
                         purchase_date: date, departure_date: date,

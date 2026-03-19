@@ -36,6 +36,24 @@ Plans live in `.claude/planning/` — this is separate from `.claude/plan/` (whi
 - `dashboard/app/page.tsx` — Main dashboard page (all 5 tabs)
 - `dashboard/lib/cache.ts` — Data caching + filtering logic
 
+## Deployment
+
+The dashboard is deployed to Vercel from a **separate standalone repo**:
+- **This repo**: `StephaneFurderer/travelers-demo-data` — monorepo with Python generator + dashboard in `dashboard/` subdirectory
+- **Vercel repo**: `StephaneFurderer/travel-insurance-dashboard` — dashboard files only (root level, no `dashboard/` prefix), branch `master`
+
+**After making dashboard changes, you must sync to the Vercel repo:**
+```bash
+# From this repo's root:
+rsync -av --delete \
+  --exclude '.git' --exclude 'node_modules' --exclude '.next' --exclude '.env*' \
+  dashboard/ /Users/sf/Applications/travel-insurance-dashboard/
+
+# Then commit and push:
+cd /Users/sf/Applications/travel-insurance-dashboard
+git add -A && git commit -m "Sync from travelers-demo-data" && git push
+```
+
 ## Conventions
 
 - GLM coefficients are hardcoded in config files, not fitted from data
