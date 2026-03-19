@@ -153,7 +153,7 @@ export function DislocationTab({ data, onNavigateToMap }: DislocationTabProps) {
   return (
     <div className="space-y-6">
       {/* ─── Stepper Controls ─── */}
-      <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-2">
+      <div className="sticky top-[73px] z-40 flex items-center justify-between rounded-lg border bg-background/95 backdrop-blur px-4 py-2 shadow-sm">
         <Button
           variant="ghost"
           size="sm"
