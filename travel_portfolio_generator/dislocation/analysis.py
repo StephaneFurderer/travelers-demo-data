@@ -29,6 +29,7 @@ def compute_baselines(cur):
             COUNT(p.id) AS policies,
             COUNT(c.id) AS claims,
             SUM(COALESCE(c.claim_amount, 0)) AS total_loss,
+            SUM(p.pure_premium) AS total_pure_premium,
             CASE WHEN COUNT(c.id) > 0 THEN SUM(c.claim_amount) / COUNT(c.id) ELSE 0 END AS avg_severity
         FROM bookings b
         JOIN policies p ON p.booking_id = b.id
@@ -38,22 +39,26 @@ def compute_baselines(cur):
     """)
     baselines = {}
     total_loss_all = 0
+    total_pp_all = 0
     total_policies_all = 0
-    for seg, policies, claims, total_loss, avg_sev in cur.fetchall():
+    for seg, policies, claims, total_loss, total_pp, avg_sev in cur.fetchall():
         baselines[seg] = {
             "policies": policies,
             "claims": claims,
             "total_loss": float(total_loss),
+            "total_pure_premium": float(total_pp),
             "loss_per_policy": float(total_loss) / policies if policies else 0,
             "frequency": claims / policies if policies else 0,
             "avg_severity": float(avg_sev),
         }
         total_loss_all += float(total_loss)
+        total_pp_all += float(total_pp)
         total_policies_all += policies
 
     baselines["_overall"] = {
         "policies": total_policies_all,
         "total_loss": total_loss_all,
+        "total_pure_premium": total_pp_all,
         "loss_per_policy": total_loss_all / total_policies_all if total_policies_all else 0,
     }
     return baselines
@@ -83,9 +88,14 @@ def compute_segment_ae(cur, baselines):
         freq_ae = claims / float(freq_exp) if freq_exp else 0
         sev_ae = float(avg_sev) / baselines[seg]["avg_severity"] if baselines[seg]["avg_severity"] > 0 else 0
 
+        bl = baselines[seg]
         results.append({
             "dimension": seg,
             "dimension_type": "segment",
+            "policies_2025": bl["policies"],
+            "claims_2025": bl["claims"],
+            "total_loss_2025": round(bl["total_loss"], 2),
+            "total_loss_2025_expected": round(bl["total_pure_premium"], 2),
             "policies_2026": policies,
             "claims_2026": claims,
             "total_loss_2026": round(float(total_loss), 2),
@@ -94,9 +104,9 @@ def compute_segment_ae(cur, baselines):
             "ae_ratio": round(ae, 4),
             "freq_ae": round(freq_ae, 4),
             "sev_ae": round(sev_ae, 4),
-            "frequency_2025": round(baselines[seg]["frequency"], 4),
+            "frequency_2025": round(bl["frequency"], 4),
             "frequency_2026": round(claims / policies, 4) if policies else 0,
-            "avg_severity_2025": round(baselines[seg]["avg_severity"], 2),
+            "avg_severity_2025": round(bl["avg_severity"], 2),
             "avg_severity_2026": round(float(avg_sev), 2),
         })
     return results
