@@ -17,6 +17,9 @@ from config import (
 )
 from dislocation.config_2026 import FREQ_GLM_2026, SEV_GLM_2026
 
+# Half-variance correction for log-normal E[X] = exp(mu + sigma^2/2)
+_HALF_VAR = (SEVERITY_NOISE_STD ** 2) / 2
+
 
 class DislocatedPortfolioGenerator(PortfolioGenerator):
     """Generates 2026 bookings with 2025 model predictions but 2026 actual claims."""
@@ -83,13 +86,22 @@ class DislocatedPortfolioGenerator(PortfolioGenerator):
 
         return min(np.exp(log_lambda), MAX_FREQUENCY)
 
-    # ── Severity inflation: exp(3.12)/exp(3.0) ≈ 1.127 (12.7%) ────────────
-    SEVERITY_INFLATION = np.exp(SEV_GLM_2026["intercept"]) / np.exp(SEV_GLM["intercept"])
+    # ── 2026 expected severity from SEV_GLM_2026 ──────────────────────────
+
+    def _compute_expected_severity_2026(self, age: int, trip_cost: float,
+                                         is_flight: bool) -> float:
+        """E[severity] from the 2026 severity GLM — profile-specific."""
+        log_sev = SEV_GLM_2026["intercept"]
+        log_sev += SEV_GLM_2026["age"] * (age - 40) / 10
+        log_sev += SEV_GLM_2026["log_trip_cost"] * np.log(max(trip_cost, 1))
+        if is_flight:
+            log_sev += SEV_GLM_2026["product_flight"]
+        return np.exp(log_sev + _HALF_VAR)
 
     def _gen_claim_2026(self, freq_2026: float, policy: dict,
-                        purchase_date: date, departure_date: date,
+                        age: int, purchase_date: date, departure_date: date,
                         return_date: date) -> dict | None:
-        """Generate a claim using 2026 actual frequency + inflated severity."""
+        """Generate a claim using 2026 actual frequency + 2026 severity GLM."""
         if self.rng.random() >= freq_2026:
             return None
 
@@ -100,9 +112,13 @@ class DislocatedPortfolioGenerator(PortfolioGenerator):
         offset = int(self.rng.integers(0, days_range))
         claim_date = purchase_date + timedelta(days=offset)
 
+        # Compute 2026 severity from SEV_GLM_2026 for this policy's risk profile
+        is_flight = policy["product_id"] == 2
+        sev_2026 = self._compute_expected_severity_2026(age, policy["trip_cost"], is_flight)
+
         return {
             "claim_date": claim_date.isoformat(),
-            "claim_amount": round(policy["expected_loss"] * self.SEVERITY_INFLATION, 2),
+            "claim_amount": round(sev_2026, 2),
         }
 
     # ── Override generate_booking ───────────────────────────────────────────
@@ -128,7 +144,7 @@ class DislocatedPortfolioGenerator(PortfolioGenerator):
                 dest_type
             )
             claim = self._gen_claim_2026(
-                freq_2026, pol,
+                freq_2026, pol, booking["age"],
                 purchase_date, departure_date, return_date
             )
             if claim:

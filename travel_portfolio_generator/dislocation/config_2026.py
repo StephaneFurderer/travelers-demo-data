@@ -33,13 +33,13 @@ FREQ_GLM_2026 = {
 
 # ── Severity GLM — 2026 Actual ──────────────────────────────────────────────
 # Changes vs 2025:
-#   intercept:     3.0 → 3.12 (~12% severity inflation)
-#   log_trip_cost: 0.40 → 0.45 (larger trips → bigger losses)
+#   intercept:     3.0 → 3.05 (~5% base severity inflation)
+#   log_trip_cost: 0.40 → 0.42 (mild trip-cost sensitivity increase)
 
 SEV_GLM_2026 = {
-    "intercept": 3.12,
+    "intercept": 3.05,
     "age": 0.01,
-    "log_trip_cost": 0.45,
+    "log_trip_cost": 0.41,
     "product_flight": -0.20,
     "post_departure": -0.30,
 }
